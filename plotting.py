@@ -96,11 +96,13 @@ def plot_metric(df, xlabel, ylabel, plot_params, file_name=None, save=False):
         plt.ylabel(ylabel, fontweight="bold")
         plt.legend(loc="upper left")
         if save:
-            plt.savefig(f"{file_name}.png")
+            plt.savefig(
+                os.path.join("figures", file_name), dpi=300, bbox_inches="tight"
+            )
         plt.show()
 
 
-def plot_heatmap(df, plot_params, plot_name=None):
+def plot_heatmap(df, plot_params, file_name=None):
     # Find the first row where DCI_WME is lower than Bayes
     star_x = None
     for idx in df.index:
@@ -158,8 +160,10 @@ def plot_heatmap(df, plot_params, plot_name=None):
         plt.xlabel(r"Inflation Factor $\alpha$", fontweight="bold")
         plt.tight_layout()
 
-        if plot_name is not None:
-            plt.savefig(os.path.join("/content", plot_name))
+        if file_name is not None:
+            plt.savefig(
+                os.path.join("figures", file_name), dpi=300, bbox_inches="tight"
+            )
 
         plt.show()
 
@@ -168,7 +172,7 @@ def plot_rmse_stackplot(
     rmse_scores,
     plot_params=None,
     save=False,
-    filename="tarmse_plot_l63.png",
+    file_name="tarmse_plot_l63.png",
     colors=None,
     labels=None,
     figsize=None,
@@ -184,7 +188,7 @@ def plot_rmse_stackplot(
         Matplotlib rc parameters to use as context
     save : bool, default False
         Whether to save the figure
-    filename : str, default 'tarmse_plot_l63.png'
+    file_name : str, default 'tarmse_plot_l63.png'
         Filename for saved figure
     colors : list, optional
         Custom colors for the plot. Default is ['#B28B6B', '#FFA733', '#6ACC65']
@@ -247,7 +251,9 @@ def plot_rmse_stackplot(
         plt.tight_layout()
 
         if save:
-            plt.savefig(filename, dpi=300, bbox_inches="tight")
+            plt.savefig(
+                os.path.join("figures", file_name), dpi=300, bbox_inches="tight"
+            )
 
         plt.show()
 
@@ -279,5 +285,7 @@ def plot_cross_val(heatmap_df, plot_params, file_name=None):
             ticks=np.arange(len(heatmap_df.index)) + 0.5, labels=heatmap_df.index
         )
         if file_name is not None:
-            plt.savefig(f"{file_name}.png")
+            plt.savefig(
+                os.path.join("figures", file_name), dpi=300, bbox_inches="tight"
+            )
         plt.show()
