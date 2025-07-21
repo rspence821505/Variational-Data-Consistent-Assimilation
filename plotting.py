@@ -1,13 +1,11 @@
-import matplotlib.pyplot as plt
-import seaborn as sns
-import jax.numpy as jnp
 import os
+
 import numpy as np
-import pandas as pd
+import jax.numpy as jnp
+
 import matplotlib.pyplot as plt
-import seaborn as sns
-from matplotlib.ticker import ScalarFormatter
 import matplotlib.gridspec as gridspec
+import seaborn as sns
 
 
 plot_params = {
@@ -24,160 +22,12 @@ plt.rcParams.update(plot_params)
 sns.set_palette("bright")
 
 
-def plot_models(models, config, results, obs_indices, plot_params):
-    # Generate xticks for multiples of 25
-    plot_ticks = jnp.arange(0, config.total_steps, step=config.window_size)
-    mask = -1
-    colors = ["darkviolet", "orange", "deepskyblue"]
-    line_styles = ["dashed", "dashed", "dashed"]
-
-    # Create figure and subplots
-    with plt.rc_context(plot_params):
-        fig, axes = plt.subplots(3, 1, sharex=True)
-        fig.tight_layout(pad=3.0)  # Add padding between subplots
-
-        # Create plots for each dimension
-        for i in range(3):
-            ax = axes[i]
-
-            # Plot true signal
-            ax.plot(
-                results["trajectory"][obs_indices, :][:mask, i],
-                color="green",
-                label=f"True Signal",
-            )
-
-            # Plot model analyses
-            for idx, model in enumerate(models):
-                ax.plot(
-                    results["analysis"][model][obs_indices, :][:mask, i],
-                    color=colors[idx],
-                    linestyle=line_styles[idx],
-                    label=f"{model} Analysis",
-                )
-
-            # Plot observations if available
-            if i < config.obs_dim:
-                ax.plot(
-                    results["y_obs"].T[:mask, i],
-                    "o",
-                    color="red",
-                    label=f"Observations",
-                )
-
-            window = len(results["trajectory"][obs_indices, :][::mask, i]) - 1
-
-            # Add vertical lines for each value in plot_ticks
-            for tick in jnp.linspace(0, window, num=len(plot_ticks)):
-                ax.axvline(x=tick, color="gray", linestyle="--", linewidth=0.5)
-
-            # Set x-ticks using plot_ticks
-            ax.set_xticks(jnp.linspace(0, window, num=len(plot_ticks)))
-            ax.set_xticklabels(plot_ticks.astype(int), rotation=45)
-
-            # Set labels
-            ax.set_ylabel(f"$Z_{i+1}$")
-            if i == 2:  # Only add xlabel to bottom subplot
-                ax.set_xlabel("Time")
-
-        # Add single legend at the top of the figure
-        handles, labels = axes[0].get_legend_handles_labels()
-        fig.legend(
-            handles,
-            labels,
-            bbox_to_anchor=(0.5, 1.0),  # Position above all subplots
-            loc="center",
-            ncol=len(models) + 2,  # All items in one row
-            bbox_transform=fig.transFigure,
-        )
-
-        plt.show()
-
-
-def plot_metric(df, xlabel, ylabel, plot_params, file_name=None, save=False):
-    with plt.rc_context(plot_params):
-        df.T.plot(style=["r-o", "b-o", "g-o", "y-o", "m-o"])
-        plt.xlabel(xlabel, fontweight="bold")
-        plt.ylabel(ylabel, fontweight="bold")
-        plt.legend(loc="upper left")
-        if save:
-            plt.savefig(
-                os.path.join("figures", file_name), dpi=300, bbox_inches="tight"
-            )
-        plt.show()
-
-
-def plot_heatmap(df, plot_params, file_name=None):
-    # Find the first row where DCI_WME is lower than Bayes
-    star_x = None
-    for idx in df.index:
-        if df.loc[idx]["DCI_WME"] < df.loc[idx]["Bayes"]:
-            star_x = df.index.get_loc(idx)
-            break
-
-    # Find the minimum value and its location (excluding NaN values)
-    min_value = df.min().min()
-    min_metric = df.min().idxmin()
-    min_iteration = df[min_metric].idxmin()
-
-    with plt.rc_context(plot_params):
-        ax = sns.heatmap(
-            df.T,
-            cmap="magma",
-            annot=True,
-            fmt=".2f",
-            annot_kws={"size": 18},
-            cbar_kws={"label": "RMSE", "fraction": 0.2, "aspect": 15, "pad": 0.015},
-            linewidth=0.5,
-            linecolor="white",
-            xticklabels=df.index.tolist(),
-            yticklabels=["Bayes", "DCI", "DCI_WME"],
-        )
-
-        # Plot yellow star for minimum value
-        min_x = df.index.tolist().index(min_iteration)
-        min_y = ["Bayes", "DCI", "DCI_WME"].index(min_metric)
-        plt.plot(
-            min_x + 0.5,
-            min_y + 0.2,
-            marker="*",
-            color="yellow",
-            markersize=25,
-            markeredgecolor="white",
-            markeredgewidth=2,
-            zorder=3,
-        )
-
-        # Plot blue star at first occurrence where DCI_WME < Bayes
-        if star_x is not None:
-            star_y = ["Bayes", "DCI", "DCI_WME"].index("DCI_WME")
-            plt.plot(
-                star_x + 0.5,
-                star_y + 0.2,
-                marker="*",
-                color="aqua",
-                markersize=25,
-                markeredgecolor="white",
-                markeredgewidth=2,
-                zorder=3,
-            )
-
-        plt.xlabel(r"Inflation Factor $\alpha$", fontweight="bold")
-        plt.tight_layout()
-
-        if file_name is not None:
-            plt.savefig(
-                os.path.join("figures", file_name), dpi=300, bbox_inches="tight"
-            )
-
-        plt.show()
-
-
 def plot_rmse_stackplot(
     rmse_scores,
     plot_params=None,
+    show_plot=False,
     save_plot=False,
-    file_name="figures/tarmse_plot_l63.png",
+    file_name="tarmse_plot_l63.png",
     colors=None,
     labels=None,
     figsize=None,
@@ -259,13 +109,15 @@ def plot_rmse_stackplot(
             plt.savefig(
                 os.path.join("figures", file_name), dpi=300, bbox_inches="tight"
             )
-
-        plt.show()
+        if show_plot:
+            plt.show()
 
     return fig, ax
 
 
-def plot_cross_val(heatmap_df, plot_params, save_plot=False, file_name=None):
+def plot_cross_val(
+    heatmap_df, plot_params, show_plot=False, save_plot=False, file_name=None
+):
 
     mat_array = jnp.asarray(heatmap_df)
 
@@ -282,7 +134,7 @@ def plot_cross_val(heatmap_df, plot_params, save_plot=False, file_name=None):
         # Format the plot
         plt.colorbar(pcm, ax=ax)
         plt.xlabel("Observation Density", fontweight="bold")
-        plt.ylabel("$\sigma_{\mathrm{obs}}$", fontsize=44, fontweight="bold")
+        plt.ylabel(r"$\sigma_{\mathrm{obs}}$", fontsize=44, fontweight="bold")
         ax.set_xticks(
             ticks=np.arange(len(heatmap_df.columns)) + 0.5, labels=heatmap_df.columns
         )
@@ -293,13 +145,15 @@ def plot_cross_val(heatmap_df, plot_params, save_plot=False, file_name=None):
             plt.savefig(
                 os.path.join("figures", file_name), dpi=300, bbox_inches="tight"
             )
-        plt.show()
+
+        if show_plot:
+            plt.show()
 
 
 def create_sigma_histogram(
     data,
     plot_params,
-    filename="figures/sigma_b_bound_distribution.png",
+    file_name="sigma_b_bound_distribution.png",
     xlabel="Estimated Lower Bound on $\\sigma_b^2$",
     ylabel="Frequency",
     color="darkmagenta",
@@ -318,7 +172,7 @@ def create_sigma_histogram(
     plot_params : dict
         Matplotlib rc parameters for styling
     filename : str, optional
-        Path to save the figure (default: "figures/sigma_b_bound_distribution.png")
+        Path to save the figure (default: "sigma_b_bound_distribution.png")
     xlabel : str, optional
         X-axis label
     ylabel : str, optional
@@ -398,7 +252,7 @@ def create_sigma_histogram(
         # Save plot if requested
         if save_plot:
             plt.savefig(
-                filename,
+                os.path.join("figures", file_name),
                 dpi=dpi,
                 bbox_inches="tight",
                 facecolor="white",
@@ -412,13 +266,20 @@ def create_sigma_histogram(
     return fig, ax
 
 
+import matplotlib.pyplot as plt
+import seaborn as sns
+import pandas as pd
+import os
+import traceback
+
+
 def create_rmse_heatmap(
     df_melt,
     plot_params,
     index_col="Method",
     columns_col="Sigma",
     values_col="RMSE",
-    filename="figures/obs_inflation_levels_l63.png",
+    file_name="obs_inflation_levels_l63.png",
     xlabel=r"$\sigma_{obs}$",
     ylabel="",
     cmap="YlOrRd",
@@ -439,132 +300,338 @@ def create_rmse_heatmap(
 ):
     """
     Create a heatmap with optional minimum value markers.
-
-    Parameters:
-    -----------
-    df_melt : pandas.DataFrame
-        Melted dataframe with data to plot
-    plot_params : dict
-        Matplotlib rc parameters for styling
-    index_col : str, optional
-        Column to use as heatmap index (default: 'Method')
-    columns_col : str, optional
-        Column to use as heatmap columns (default: 'Sigma')
-    values_col : str, optional
-        Column to use as heatmap values (default: 'RMSE')
-    filename : str, optional
-        Path to save the figure
-    xlabel : str, optional
-        X-axis label (default: r"$\sigma_{obs}$")
-    ylabel : str, optional
-        Y-axis label (default: '')
-    cmap : str, optional
-        Colormap for heatmap (default: "YlOrRd")
-    annot : bool, optional
-        Whether to annotate cells with values (default: True)
-    fmt : str, optional
-        Format string for annotations (default: ".2f")
-    linewidth : float, optional
-        Width of lines separating cells (default: 2)
-    linecolor : str, optional
-        Color of lines separating cells (default: "black")
-    mark_minimum : bool, optional
-        Whether to mark minimum values with stars (default: True)
-    star_color : str, optional
-        Color of the star markers (default: 'deepskyblue')
-    star_outline_color : str, optional
-        Color of star outline (default: 'white')
-    star_size : int, optional
-        Size of star markers (default: 32)
-    star_outline_size : int, optional
-        Size of star outline (default: 36)
-    xlabel_fontsize : int, optional
-        Font size for x-axis label (default: 36)
-    cbar_label : str, optional
-        Label for colorbar (default: 'RMSE')
-    save_plot : bool, optional
-        Whether to save the plot (default: True)
-    show_plot : bool, optional
-        Whether to display the plot (default: True)
-    dpi : int, optional
-        DPI for saved figure (default: 300)
-
-    Returns:
-    --------
-    fig, ax : matplotlib figure and axis objects
-    pivot : pandas.DataFrame
-        The pivoted data used for the heatmap
+    Enhanced with comprehensive error handling for debugging.
     """
 
-    with plt.rc_context(plot_params):
+    # print("Starting heatmap creation...")
+
+    try:
+        # Input validation
+        if df_melt is None or df_melt.empty:
+            raise ValueError("Input dataframe is None or empty")
+
+        required_cols = [index_col, columns_col, values_col]
+        missing_cols = [col for col in required_cols if col not in df_melt.columns]
+        if missing_cols:
+            raise ValueError(f"Missing columns in dataframe: {missing_cols}")
+
+        # print(f"DataFrame shape: {df_melt.shape}")
+        # print(f"DataFrame columns: {list(df_melt.columns)}")
+        # print(
+        #     f"Using columns - Index: {index_col}, Columns: {columns_col}, Values: {values_col}"
+        # )
+
+    except Exception as e:
+        print(f"ERROR in input validation: {e}")
+        traceback.print_exc()
+        return None, None, None
+
+    try:
         # Create pivot table
         pivot = df_melt.pivot(index=index_col, columns=columns_col, values=values_col)
 
-        # Create the heatmap
-        ax = sns.heatmap(
-            pivot,
-            annot=annot,
-            fmt=fmt,
-            linewidth=linewidth,
-            linecolor=linecolor,
-            cmap=cmap,
-            cbar_kws={"label": cbar_label},
-        )
+        # Check for NaN values
+        if pivot.isnull().any().any():
+            print("WARNING: Pivot table contains NaN values")
+            print(f"NaN count: {pivot.isnull().sum().sum()}")
 
-        # Mark minimum values with stars if requested
-        if mark_minimum:
-            for col_idx, col in enumerate(pivot.columns):
-                min_row_idx = pivot[col].idxmin()  # Get the index of minimum value
-                row_idx = pivot.index.get_loc(
-                    min_row_idx
-                )  # Get position in the pivot table
+    except Exception as e:
+        print(f"ERROR in pivot table creation: {e}")
+        traceback.print_exc()
+        return None, None, None
 
-                # Add white outline (larger star)
-                ax.text(
-                    col_idx + 0.5,
-                    row_idx + 0.3,
-                    "★",
-                    horizontalalignment="center",
-                    verticalalignment="center",
-                    color=star_outline_color,
-                    fontsize=star_outline_size,
-                    fontweight="bold",
+    try:
+        # Set up plotting context
+        with plt.rc_context(plot_params):
+            fig, ax = plt.subplots(figsize=(10, 8))
+
+            try:
+                # Create the heatmap
+                heatmap = sns.heatmap(
+                    pivot,
+                    annot=annot,
+                    fmt=fmt,
+                    linewidth=linewidth,
+                    linecolor=linecolor,
+                    cmap=cmap,
+                    cbar_kws={"label": cbar_label},
+                    ax=ax,
                 )
+                # print("Heatmap created successfully")
 
-                # Add colored star on top (smaller)
-                ax.text(
-                    col_idx + 0.5,
-                    row_idx + 0.3,
-                    "★",
-                    horizontalalignment="center",
-                    verticalalignment="center",
-                    color=star_color,
-                    fontsize=star_size,
-                    fontweight="bold",
-                )
+            except Exception as e:
+                print(f"ERROR in heatmap creation: {e}")
+                traceback.print_exc()
+                plt.close(fig)
+                return None, None, None
 
-        # Set labels
-        plt.xlabel(xlabel, fontsize=xlabel_fontsize)
-        plt.ylabel(ylabel)
+            try:
+                # Mark minimum values with stars if requested
+                if mark_minimum:
+                    # print("Adding minimum value markers...")
+                    for col_idx, col in enumerate(pivot.columns):
+                        try:
 
-        # Make colorbar label bold
-        cbar = ax.collections[0].colorbar
-        cbar.set_label(cbar_label, fontweight="bold")
+                            # Get the minimum value and its index
+                            min_row_idx = pivot[col].idxmin()
 
-        plt.tight_layout()
+                            # Get position in the pivot table
+                            row_idx = pivot.index.get_loc(min_row_idx)
 
-        # Get figure object
-        fig = plt.gcf()
+                            # Add white outline (larger star)
+                            ax.text(
+                                col_idx + 0.5,
+                                row_idx + 0.3,
+                                "★",
+                                horizontalalignment="center",
+                                verticalalignment="center",
+                                color=star_outline_color,
+                                fontsize=star_outline_size,
+                                fontweight="bold",
+                            )
 
-        # Save plot if requested
-        if save_plot:
-            plt.savefig(filename, dpi=dpi, bbox_inches="tight")
+                            # Add colored star on top (smaller)
+                            ax.text(
+                                col_idx + 0.5,
+                                row_idx + 0.3,
+                                "★",
+                                horizontalalignment="center",
+                                verticalalignment="center",
+                                color=star_color,
+                                fontsize=star_size,
+                                fontweight="bold",
+                            )
+                            # print(f"Star added for column {col}")
 
-        # Show plot if requested
-        if show_plot:
-            plt.show()
+                        except Exception as e:
+                            print(
+                                f"ERROR adding star for column {col} (index {col_idx}): {e}"
+                            )
+                            traceback.print_exc()
+                            # Continue with other columns
+                            continue
 
-    return fig, ax, pivot
+            except Exception as e:
+                print(f"ERROR in minimum value marking section: {e}")
+                traceback.print_exc()
+                # Continue without stars
+
+            try:
+                # Set labels
+
+                plt.xlabel(xlabel, fontsize=xlabel_fontsize)
+                plt.ylabel(ylabel)
+
+            except Exception as e:
+                print(f"ERROR setting labels: {e}")
+                traceback.print_exc()
+
+            try:
+                # Make colorbar label bold
+
+                cbar = ax.collections[0].colorbar
+                cbar.set_label(cbar_label, fontweight="bold")
+
+            except Exception as e:
+                print(f"ERROR setting colorbar label: {e}")
+                traceback.print_exc()
+
+            try:
+                plt.tight_layout()
+
+            except Exception as e:
+                print(f"ERROR in tight_layout: {e}")
+                traceback.print_exc()
+
+            try:
+                # Save plot if requested
+                if save_plot:
+
+                    # Check if figures directory exists
+                    figures_dir = "figures"
+                    if not os.path.exists(figures_dir):
+                        print(f"Creating directory: {figures_dir}")
+                        os.makedirs(figures_dir)
+
+                    full_path = os.path.join(figures_dir, file_name)
+                    plt.savefig(full_path, dpi=dpi, bbox_inches="tight")
+
+            except Exception as e:
+                print(f"ERROR saving plot: {e}")
+                traceback.print_exc()
+
+            try:
+                # Show plot if requested
+                if show_plot:
+                    plt.show()
+
+            except Exception as e:
+                print(f"ERROR showing plot: {e}")
+                traceback.print_exc()
+
+        return fig, ax, pivot
+
+    except Exception as e:
+        print(f"ERROR in plotting context: {e}")
+        traceback.print_exc()
+        return None, None, None
+
+
+# def create_rmse_heatmap(
+#     df_melt,
+#     plot_params,
+#     index_col="Method",
+#     columns_col="Sigma",
+#     values_col="RMSE",
+#     file_name="obs_inflation_levels_l63.png",
+#     xlabel=r"$\sigma_{obs}$",
+#     ylabel="",
+#     cmap="YlOrRd",
+#     annot=True,
+#     fmt=".2f",
+#     linewidth=2,
+#     linecolor="black",
+#     mark_minimum=True,
+#     star_color="deepskyblue",
+#     star_outline_color="white",
+#     star_size=32,
+#     star_outline_size=36,
+#     xlabel_fontsize=36,
+#     cbar_label="RMSE",
+#     save_plot=False,
+#     show_plot=False,
+#     dpi=300,
+# ):
+#     """
+#     Create a heatmap with optional minimum value markers.
+
+#     Parameters:
+#     -----------
+#     df_melt : pandas.DataFrame
+#         Melted dataframe with data to plot
+#     plot_params : dict
+#         Matplotlib rc parameters for styling
+#     index_col : str, optional
+#         Column to use as heatmap index (default: 'Method')
+#     columns_col : str, optional
+#         Column to use as heatmap columns (default: 'Sigma')
+#     values_col : str, optional
+#         Column to use as heatmap values (default: 'RMSE')
+#     filename : str, optional
+#         Path to save the figure
+#     xlabel : str, optional
+#         X-axis label (default: r"$\sigma_{obs}$")
+#     ylabel : str, optional
+#         Y-axis label (default: '')
+#     cmap : str, optional
+#         Colormap for heatmap (default: "YlOrRd")
+#     annot : bool, optional
+#         Whether to annotate cells with values (default: True)
+#     fmt : str, optional
+#         Format string for annotations (default: ".2f")
+#     linewidth : float, optional
+#         Width of lines separating cells (default: 2)
+#     linecolor : str, optional
+#         Color of lines separating cells (default: "black")
+#     mark_minimum : bool, optional
+#         Whether to mark minimum values with stars (default: True)
+#     star_color : str, optional
+#         Color of the star markers (default: 'deepskyblue')
+#     star_outline_color : str, optional
+#         Color of star outline (default: 'white')
+#     star_size : int, optional
+#         Size of star markers (default: 32)
+#     star_outline_size : int, optional
+#         Size of star outline (default: 36)
+#     xlabel_fontsize : int, optional
+#         Font size for x-axis label (default: 36)
+#     cbar_label : str, optional
+#         Label for colorbar (default: 'RMSE')
+#     save_plot : bool, optional
+#         Whether to save the plot (default: True)
+#     show_plot : bool, optional
+#         Whether to display the plot (default: True)
+#     dpi : int, optional
+#         DPI for saved figure (default: 300)
+
+#     Returns:
+#     --------
+#     fig, ax : matplotlib figure and axis objects
+#     pivot : pandas.DataFrame
+#         The pivoted data used for the heatmap
+#     """
+
+#     with plt.rc_context(plot_params):
+#         # Create pivot table
+#         pivot = df_melt.pivot(index=index_col, columns=columns_col, values=values_col)
+
+#         # Create the heatmap
+#         ax = sns.heatmap(
+#             pivot,
+#             annot=annot,
+#             fmt=fmt,
+#             linewidth=linewidth,
+#             linecolor=linecolor,
+#             cmap=cmap,
+#             cbar_kws={"label": cbar_label},
+#         )
+
+#         # Mark minimum values with stars if requested
+#         if mark_minimum:
+#             for col_idx, col in enumerate(pivot.columns):
+#                 min_row_idx = pivot[col].idxmin()  # Get the index of minimum value
+#                 row_idx = pivot.index.get_loc(
+#                     min_row_idx
+#                 )  # Get position in the pivot table
+
+#                 # Add white outline (larger star)
+#                 ax.text(
+#                     col_idx + 0.5,
+#                     row_idx + 0.3,
+#                     "★",
+#                     horizontalalignment="center",
+#                     verticalalignment="center",
+#                     color=star_outline_color,
+#                     fontsize=star_outline_size,
+#                     fontweight="bold",
+#                 )
+
+#                 # Add colored star on top (smaller)
+#                 ax.text(
+#                     col_idx + 0.5,
+#                     row_idx + 0.3,
+#                     "★",
+#                     horizontalalignment="center",
+#                     verticalalignment="center",
+#                     color=star_color,
+#                     fontsize=star_size,
+#                     fontweight="bold",
+#                 )
+
+#         # Set labels
+#         plt.xlabel(xlabel, fontsize=xlabel_fontsize)
+#         plt.ylabel(ylabel)
+
+#         # Make colorbar label bold
+#         cbar = ax.collections[0].colorbar
+#         cbar.set_label(cbar_label, fontweight="bold")
+
+#         plt.tight_layout()
+
+#         # Get figure object
+#         fig = plt.gcf()
+
+#         # Save plot if requested
+#         if save_plot:
+#             plt.savefig(
+#                 os.path.join("figures", file_name), dpi=dpi, bbox_inches="tight"
+#             )
+
+#         # Show plot if requested
+#         if show_plot:
+#             plt.show()
+
+#     return fig, ax, pivot
 
 
 def create_dof_slope_plot(
@@ -574,8 +641,9 @@ def create_dof_slope_plot(
     colors,
     markers,
     plot_params,
+    show_plot=False,
     save_plot=False,
-    file_name="figures/L96_rmse_dof.png",
+    file_name="L96_rmse_dof.png",
 ):
     """
     Create a multi-point slope plot for DOF vs RMSE data
@@ -728,9 +796,12 @@ def create_dof_slope_plot(
         plt.tight_layout()
 
         if save_plot:
-            plt.savefig(file_name, dpi=300, bbox_inches="tight")
+            plt.savefig(
+                os.path.join("figures", file_name), dpi=300, bbox_inches="tight"
+            )
 
-        plt.show()
+        if show_plot:
+            plt.show()
 
 
 def create_combined_rmse_bias_plot(
@@ -741,7 +812,7 @@ def create_combined_rmse_bias_plot(
     model_configs,
     plot_params,
     normalize_series,
-    file_name="figures/combined_rmse_bias_plot_l96.png",
+    file_name="combined_rmse_bias_plot_l96.png",
     figsize=None,
     background_color="#3B4CC0",  # Indigo
     analysis_color="#FABD2F",
@@ -1008,7 +1079,9 @@ def create_combined_rmse_bias_plot(
 
         # Save plot if requested
         if save_plot:
-            plt.savefig(file_name, bbox_inches="tight", dpi=dpi)
+            plt.savefig(
+                os.path.join("figures", file_name), bbox_inches="tight", dpi=dpi
+            )
 
         # Show plot if requested
         if show_plot:
@@ -1026,8 +1099,9 @@ def create_mixed_layout_custom(
     window_sizes,
     colors,
     plot_params,
+    show_plot=False,
     save_plot=False,
-    file_name="figures/window_size_plot_l96.png",
+    file_name="window_size_plot_l96.png",
 ):
     """Mixed layout with your data using window sizes 2, 5, and 10 - with stacked bar chart"""
 
@@ -1186,9 +1260,12 @@ def create_mixed_layout_custom(
         plt.tight_layout(rect=[0, 0, 1, 0.9])
 
         if save_plot:
-            plt.savefig(file_name, dpi=300, bbox_inches="tight")
+            plt.savefig(
+                os.path.join("figures", file_name), dpi=300, bbox_inches="tight"
+            )
 
-        plt.show()
+        if show_plot:
+            plt.show()
 
 
 def create_stacked_bar_plot(
@@ -1198,7 +1275,7 @@ def create_stacked_bar_plot(
     colors,
     x_labels,
     plot_params,
-    file_name="figures/comp_cost_plot_l96.png",
+    file_name="comp_cost_plot_l96.png",
     xlabel="Degrees of Freedom",
     ylabel="Runtime (seconds)",
     bar_width=0.5,
@@ -1403,7 +1480,7 @@ def create_stacked_bar_plot(
 
         # Save plot if requested (DPI and bbox controlled by plot_params)
         if save_plot:
-            plt.savefig(file_name)
+            plt.savefig(os.path.join("figures", file_name))
 
         # Show plot if requested
         if show_plot:
