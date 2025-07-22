@@ -67,43 +67,43 @@ The methods are tested on 3 chaotic dynamical systems:
 Generate all figures from the paper:
 
 ```bash
-python paper_figures.py
+python paper_examples.py
 ```
 
 This will create a `figures/` directory and generate all 8 figures used in the paper.
 
 ## Usage
 
-The `paper_figures.py` script provides flexible options for figure generation:
+The `paper_examples.py` script provides flexible options for figure generation:
 
 ### Generate All Figures (Default)
 
 ```bash
-python paper_figures.py
+python paper_examples.py
 # or explicitly
-python paper_figures.py --all
+python paper_examples.py --all
 ```
 
 ### Generate Specific Figures
 
 ```bash
 # Generate a single figure
-python paper_figures.py --figure 3
+python paper_examples.py --figure 3
 
 # Generate multiple specific figures
-python paper_figures.py --figures 1 2 5 8
+python paper_examples.py --figures 1 2 5 8
 
 # Generate figures for Lorenz 63 only (figures 1-4)
-python paper_figures.py --figures 1 2 3 4
+python paper_examples.py --figures 1 2 3 4
 ```
 
 ### Command Line Options
 
-| Option                | Description                    | Example                                   |
-| --------------------- | ------------------------------ | ----------------------------------------- |
-| `--all`               | Generate all figures (default) | `python paper_figures.py --all`           |
-| `--figure N`          | Generate single figure N (1-8) | `python paper_figures.py --figure 3`      |
-| `--figures N1 N2 ...` | Generate multiple figures      | `python paper_figures.py --figures 1 3 5` |
+| Option                | Description                    | Example                                    |
+| --------------------- | ------------------------------ | ------------------------------------------ |
+| `--all`               | Generate all figures (default) | `python paper_examples.py --all`           |
+| `--figure N`          | Generate single figure N (1-8) | `python paper_examples.py --figure 3`      |
+| `--figures N1 N2 ...` | Generate multiple figures      | `python paper_examples.py --figures 1 3 5` |
 
 ### Output
 
@@ -133,7 +133,7 @@ All figures are saved as PNG files in the `figures/` directory:
 
 ```
 .
-├── paper_figures.py          # Main script for figure generation
+├── paper_examples.py          # Main script for figure generation
 ├── requirements.txt          # Python dependencies
 ├── README.md                # This file
 ├── configs.py               # Configuration classes for experiments
@@ -190,7 +190,7 @@ The script automatically creates the `figures/` directory, but ensure you have w
 1. **Generate figures incrementally** during development:
 
    ```bash
-   python paper_figures.py --figure 1  # Quick test
+   python paper_examples.py --figure 1  # Quick test
    ```
 
 2. **Monitor progress** with the built-in tqdm progress bars

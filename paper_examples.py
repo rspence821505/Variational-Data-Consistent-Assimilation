@@ -602,20 +602,27 @@ def generate_figure_8():
     }
 
     dofs = [24, 36, 48, 64, 72, 84, 96]
-    inf_factors = [1, 1, 1, 1, 1, 1, 1, 1]
+    inf_factors = 7 * np.array([1, 1, 1, 1, 1, 1, 1, 1])
     comp_costs = {}
 
-    for dof, level in zip(dofs, inf_factors):
-        # Create system with default configuration
+    for dof, level in tqdm(
+        zip(dofs, inf_factors),
+        total=len(dofs),
+        desc="Running experiments",
+        unit="experiment",
+    ):
+
+        # Update progress bar description with current DOF
+        tqdm.write(f"Processing DOF: {dof}")
         config_96 = Lorenz96Config.default_config(
             state_dim=dof,
             obs_dim=dof // 2,
-            total_steps=2000,
-            window_size=20,
-            obs_frequency=4,
-            obs_std=0.1,
+            total_steps=20000,
+            window_size=10,
+            obs_frequency=2,
+            obs_std=0.5,
             inflation_factor=level,
-            seed=13,
+            seed=55486,
         )
         system_96 = LorenzSystem(config_96, lorenz96_step, cost_functions)
         system_96.obs_system._setup_observation_operator()
@@ -660,7 +667,7 @@ def generate_figure_8():
     }
 
     times = [bayes_times, dci_times, dci_wme_times]
-    fig, ax, baras = create_stacked_bar_plot(
+    fig, ax, bars = create_stacked_bar_plot(
         x,
         times,
         methods,
